@@ -1,1 +1,1 @@
-!dummyttrigger
+#dummyttrigger
