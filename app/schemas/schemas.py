@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from .models import DepartmentEnum
+from app.models.models import DepartmentEnum
 
 class AddressBase(BaseModel):
     label: str
