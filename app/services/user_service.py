@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from .models import User, FloorAddress
-from .schemas import UserUpdate, AddressCreate, AddressUpdate
+from app.models.models import User, FloorAddress
+from app.schemas import UserUpdate, AddressCreate, AddressUpdate
 
 async def get_user_by_id(db: AsyncSession, user_id: str):
     result = await db.execute(select(User).filter(User.id == user_id))
