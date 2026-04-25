@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.models import User
-from passlib.context import CryptContext
+import bcrypt
 import jwt
 import os
 from datetime import datetime, timedelta, timezone
@@ -14,7 +14,14 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 JWT_SECRET = os.getenv("JWT_SECRET", "ustbite-jwt-secret-change-in-prod")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 class LoginPayload(BaseModel):
@@ -63,7 +70,7 @@ async def login(payload: LoginPayload, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not pwd_context.verify(payload.password, user.password_hash):
+    if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(user)
     return {
@@ -99,7 +106,7 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
         phone=payload.phone,
         department=dept,
         floor_number=payload.floor_number,
-        password_hash=pwd_context.hash(payload.password),
+        password_hash=hash_password(payload.password),
     )
     db.add(new_user)
     await db.commit()
