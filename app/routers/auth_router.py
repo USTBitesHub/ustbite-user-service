@@ -25,7 +25,7 @@ class RegisterPayload(BaseModel):
     employee_id: str
     name: str
     phone: str | None = None
-    department: str = "ENGINEERING"
+    department: str = "IT"  # default to IT
     floor_number: str | None = None
 
 
@@ -33,6 +33,7 @@ def create_token(user: User) -> str:
     payload = {
         "sub": str(user.id),
         "email": user.email,
+        "name": user.name,        # used by order-service for notification emails
         "employee_id": user.employee_id,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS),
     }
@@ -88,10 +89,9 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=409, detail="Employee ID already registered")
 
     from app.models.models import DepartmentEnum
-    try:
-        dept = DepartmentEnum(payload.department.upper())
-    except ValueError:
-        dept = DepartmentEnum.ENGINEERING
+    # Case-insensitive lookup so "finance" and "Finance" both work
+    dept_map = {e.value.lower(): e for e in DepartmentEnum}
+    dept = dept_map.get(payload.department.lower(), DepartmentEnum.IT)
 
     new_user = User(
         email=payload.email,
