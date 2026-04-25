@@ -13,14 +13,18 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # asyncpg requires ONE statement per op.execute() call
+
     op.execute("""
         DO $$ BEGIN
             CREATE TYPE department_enum AS ENUM (
                 'IT', 'HR', 'Finance', 'Operations', 'Design', 'Management'
             );
         EXCEPTION WHEN duplicate_object THEN NULL;
-        END $$;
+        END $$
+    """)
 
+    op.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             employee_id VARCHAR NOT NULL,
@@ -33,10 +37,18 @@ def upgrade() -> None:
             updated_at TIMESTAMPTZ,
             UNIQUE (employee_id),
             UNIQUE (email)
-        );
-        CREATE INDEX IF NOT EXISTS ix_users_employee_id ON users(employee_id);
-        CREATE INDEX IF NOT EXISTS ix_users_email ON users(email);
+        )
+    """)
 
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_users_employee_id ON users(employee_id)"
+    )
+
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_users_email ON users(email)"
+    )
+
+    op.execute("""
         CREATE TABLE IF NOT EXISTS floor_addresses (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -45,11 +57,11 @@ def upgrade() -> None:
             wing VARCHAR,
             building VARCHAR,
             is_default BOOLEAN DEFAULT FALSE
-        );
+        )
     """)
 
 
 def downgrade() -> None:
-    op.execute("DROP TABLE IF EXISTS floor_addresses CASCADE;")
-    op.execute("DROP TABLE IF EXISTS users CASCADE;")
-    op.execute("DROP TYPE IF EXISTS department_enum;")
+    op.execute("DROP TABLE IF EXISTS floor_addresses CASCADE")
+    op.execute("DROP TABLE IF EXISTS users CASCADE")
+    op.execute("DROP TYPE IF EXISTS department_enum")
