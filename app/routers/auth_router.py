@@ -57,7 +57,7 @@ def user_to_dict(user: User) -> dict:
         "employee_id": user.employee_id,
         "name": user.name,
         "phone": user.phone,
-        "department": user.department.value if user.department else None,
+        "department": user.department.value if hasattr(user.department, 'value') else user.department,
         "floor_number": user.floor_number,
     }
 
