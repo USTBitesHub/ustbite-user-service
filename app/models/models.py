@@ -22,6 +22,7 @@ class User(Base):
     phone = Column(String)
     department = Column(Enum(DepartmentEnum), nullable=False)
     floor_number = Column(String)
+    password_hash = Column(String, nullable=True)   # bcrypt hash; nullable for backwards compat
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

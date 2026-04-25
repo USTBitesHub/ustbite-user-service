@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models.models import User
+from passlib.context import CryptContext
 import jwt
 import os
 from datetime import datetime, timedelta, timezone
@@ -13,19 +14,21 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 JWT_SECRET = os.getenv("JWT_SECRET", "ustbite-jwt-secret-change-in-prod")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class LoginPayload(BaseModel):
     email: EmailStr
-    employee_id: str
+    password: str
 
 
 class RegisterPayload(BaseModel):
     email: EmailStr
     employee_id: str
     name: str
+    password: str
     phone: str | None = None
-    department: str = "IT"  # default to IT
+    department: str = "IT"
     floor_number: str | None = None
 
 
@@ -55,14 +58,13 @@ def user_to_dict(user: User) -> dict:
 @router.post("/login")
 async def login(payload: LoginPayload, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(User).where(
-            User.email == payload.email,
-            User.employee_id == payload.employee_id
-        )
+        select(User).where(User.email == payload.email)
     )
     user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or employee ID")
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not pwd_context.verify(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(user)
     return {
         "data": {"token": token, "user": user_to_dict(user)},
@@ -73,7 +75,6 @@ async def login(payload: LoginPayload, db: AsyncSession = Depends(get_db)):
 
 @router.post("/register")
 async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db)):
-    # Check if user already exists
     result = await db.execute(
         select(User).where(User.email == payload.email)
     )
@@ -81,7 +82,6 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
     if existing:
         raise HTTPException(status_code=409, detail="User with this email already exists")
 
-    # Also check employee_id uniqueness
     result2 = await db.execute(
         select(User).where(User.employee_id == payload.employee_id)
     )
@@ -89,7 +89,6 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=409, detail="Employee ID already registered")
 
     from app.models.models import DepartmentEnum
-    # Case-insensitive lookup so "finance" and "Finance" both work
     dept_map = {e.value.lower(): e for e in DepartmentEnum}
     dept = dept_map.get(payload.department.lower(), DepartmentEnum.IT)
 
@@ -100,6 +99,7 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
         phone=payload.phone,
         department=dept,
         floor_number=payload.floor_number,
+        password_hash=pwd_context.hash(payload.password),
     )
     db.add(new_user)
     await db.commit()
