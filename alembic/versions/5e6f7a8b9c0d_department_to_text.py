@@ -16,11 +16,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Convert enum-typed column to plain TEXT
+    # 1. Drop any enum-referencing DEFAULT on the column
+    op.execute("ALTER TABLE users ALTER COLUMN department DROP DEFAULT")
+    # 2. Convert column from enum to plain TEXT
     op.execute("ALTER TABLE users ALTER COLUMN department TYPE TEXT USING department::text")
-    # Drop all variants of the stale PostgreSQL enum types
-    op.execute("DROP TYPE IF EXISTS department_enum")
-    op.execute("DROP TYPE IF EXISTS departmentenum")
+    # 3. Drop the stale enum types (CASCADE handles any remaining dependencies)
+    op.execute("DROP TYPE IF EXISTS department_enum CASCADE")
+    op.execute("DROP TYPE IF EXISTS departmentenum CASCADE")
 
 
 def downgrade() -> None:
