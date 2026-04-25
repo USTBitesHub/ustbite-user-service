@@ -84,5 +84,6 @@ async def metrics():
         media_type=CONTENT_TYPE_LATEST
     )
 
-from app.routers import user_router
+from app.routers import user_router, auth_router
 app.include_router(user_router.router)
+app.include_router(auth_router.router)
