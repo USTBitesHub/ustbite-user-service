@@ -104,7 +104,7 @@ async def register(payload: RegisterPayload, db: AsyncSession = Depends(get_db))
         employee_id=payload.employee_id,
         name=payload.name,
         phone=payload.phone,
-        department=dept,
+        department=dept.value,
         floor_number=payload.floor_number,
         password_hash=hash_password(payload.password),
     )

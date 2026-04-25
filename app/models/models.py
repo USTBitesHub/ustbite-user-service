@@ -20,9 +20,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     phone = Column(String)
-    department = Column(Enum(DepartmentEnum), nullable=False)
+    department = Column(String, nullable=False)          # stored as VARCHAR; enum enforced in app layer
     floor_number = Column(String)
-    password_hash = Column(String, nullable=True)   # bcrypt hash; nullable for backwards compat
+    password_hash = Column(String, nullable=True)        # bcrypt hash; nullable for backwards compat
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
