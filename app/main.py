@@ -44,6 +44,9 @@ async def logging_middleware(request: Request, call_next):
         response = await call_next(request)
         status_code = response.status_code
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logging.error(f"Unhandled exception [{trace_id}]: {type(e).__name__}: {e}")
         status_code = 500
         response = JSONResponse(status_code=500, content={"message": "Internal Server Error"})
         
